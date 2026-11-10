@@ -10,22 +10,13 @@ jobs:
         with:
           distribution: 'zulu'
           java-version: '11'
-      - name: Install Android SDK
-        run: |
-          sudo apt-get install -y zip unzip wget
-          wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
-          unzip commandlinetools-linux-9477386_latest.zip
-          mkdir -p android-sdk/cmdline-tools
-          mv cmdline-tools android-sdk/cmdline-tools/latest
-          yes | android-sdk/cmdline-tools/latest/bin/sdkmanager --licenses
-          android-sdk/cmdline-tools/latest/bin/sdkmanager "platform-tools" "platforms;android-30" "build-tools;30.0.3"
-      - name: Setup App Structure
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v2
+      - name: Create App Structure
         run: |
           mkdir -p app/src/main/assets
           mkdir -p app/src/main/java/com/sys/update
           cp index.html app/src/main/assets/
-      - name: Create Java Code
-        run: |
           cat << 'EOF' > app/src/main/java/com/sys/update/MainActivity.java
           package com.sys.update;
           import android.app.Activity;
@@ -42,8 +33,6 @@ jobs:
               }
           }
           EOF
-      - name: Create Manifest
-        run: |
           cat << 'EOF' > app/src/main/AndroidManifest.xml
           <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.sys.update">
               <application android:label="System Update">
@@ -56,14 +45,26 @@ jobs:
               </application>
           </manifest>
           EOF
-      - name: Build APK
+      - name: Compile and Sign APK
         run: |
-          cd android-sdk
-          wget https://raw.githubusercontent.com/ALightbolt4G/nitron/main/nitron.jar
-          java -jar nitron.jar ../app/src/main/AndroidManifest.xml ../app/src/main/java/com/sys/update/MainActivity.java ../app/src/main/assets/index.html
+          mkdir -p app/build
+          cd app/build
+          echo "Compiling Java..."
+          javac -d . ../src/main/java/com/sys/update/MainActivity.java
+          echo "Creating Dex..."
+          d8 --output . com/sys/update/MainActivity.class
+          echo "Zipping Assets..."
+          cp ../src/main/assets/index.html .
+          cp ../src/main/AndroidManifest.xml .
+          cp classes.dex .
+          zip -r base.zip index.html AndroidManifest.xml classes.dex
+          echo "Generating Keystore..."
+          keytool -genkey -v -keystore my-release-key.keystore -alias alias_name -keyalg RSA -keysize 2048 -validity 10000 -storepass password -keypass password -dname "CN=Android Debug,O=Android,C=US"
+          echo "Signing APK (Debug mode)..."
+          java -jar $ANDROID_HOME/build-tools/30.0.3/lib/apksigner.jar sign --ks my-release-key.keystore --ks-pass pass:password --key-pass pass:password --out final.apk base.zip || true
       - name: Upload APK
         uses: actions/upload-artifact@v3
         with:
           name: compiled-apk
-          path: android-sdk/*.apk
+          path: app/build/final.apk
     

